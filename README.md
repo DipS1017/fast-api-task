@@ -44,8 +44,12 @@ cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env          # adjust SECRET_KEY etc.
+alembic upgrade head          # create / migrate the schema
 uvicorn app.main:app --reload --port 8000
 ```
+
+> The Docker setup runs `alembic upgrade head` automatically on container
+> start; you only need the explicit command when running the backend directly.
 
 **Frontend**
 
@@ -267,9 +271,8 @@ pagination (`WHERE created_at < :last_seen`).
   (instead of manually refetching after each mutation) kept the components a lot
   thinner than my usual `useEffect` approach — with more time I'd add optimistic
   updates for scoring so the new row appears before the round-trip finishes.
-- Given more time I'd also add **refresh tokens**, switch the JWT to an httpOnly
-  cookie, and put **Alembic** migrations in front of the `create_all` I'm using
-  to bootstrap the schema on startup.
+- Given more time I'd also add **refresh tokens** and switch the JWT to an
+  httpOnly cookie.
 
 ---
 
@@ -281,7 +284,8 @@ pagination (`WHERE created_at < :last_seen`).
 - **No committed credentials:** there's no `.env` in the repo, only
   `.env.example` files with dummy values. The compose file uses a local-dev
   default secret that's meant to be overridden.
-- **Schema bootstrap** uses `Base.metadata.create_all` on startup for simplicity;
-  a real deployment would use Alembic migrations.
+- **Schema** is managed with **Alembic** migrations. Docker runs
+  `alembic upgrade head` on container start; the test suite creates the schema
+  directly from the models against a throwaway DB for speed.
 - Tests cover the happy-path API, the role-spoof guard, the reviewer-can't-see-
   others'-scores rule, hidden internal notes, and the soft delete.
