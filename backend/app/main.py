@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
-from .database import Base, SessionLocal, engine
+from .database import SessionLocal
 from .routers import auth, candidates
 from .seed import seed_if_empty
 
@@ -13,10 +13,8 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # create tables on boot. for a real deployment this would be Alembic.
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
+    # schema is managed by Alembic (`alembic upgrade head`), run before the app
+    # starts - see the README. here we only seed demo data when asked to.
     if settings.seed_demo_data:
         async with SessionLocal() as db:
             await seed_if_empty(db)
