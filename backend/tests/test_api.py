@@ -38,6 +38,33 @@ async def test_admin_can_create_candidate(client, admin_token):
     assert body["internal_notes"] == "promising"
 
 
+async def test_cannot_create_candidate_as_archived(client, admin_token):
+    # archived is the soft-delete state, not something you can create directly
+    resp = await client.post(
+        "/candidates",
+        headers=await auth_header(admin_token),
+        json={
+            "name": "Ghost",
+            "email": "ghost@gmail.com",
+            "role_applied": "QA",
+            "status": "archived",
+        },
+    )
+    assert resp.status_code == 422
+
+
+async def test_summary_endpoint_returns_text(client, session_maker):
+    candidate_id = await make_candidate(session_maker)
+    reviewer = await register_reviewer(client, "summary@gmail.com")
+    resp = await client.post(
+        f"/candidates/{candidate_id}/summary", headers=await auth_header(reviewer)
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["candidate_id"] == candidate_id
+    assert len(body["summary"]) > 0
+
+
 async def test_register_always_creates_reviewer(client):
     # even if a sneaky client passes role=admin, it must be ignored
     resp = await client.post(

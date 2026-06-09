@@ -1,3 +1,9 @@
+import os
+
+# don't wait the real two seconds for the mock summary during tests.
+# must be set before the app (and its cached settings) are imported.
+os.environ.setdefault("SUMMARY_DELAY_SECONDS", "0")
+
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
