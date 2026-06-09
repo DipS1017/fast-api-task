@@ -11,6 +11,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from .constants import CandidateStatus, Role
 from .database import Base
 
 
@@ -25,7 +26,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     # only ever "reviewer" or "admin". registration forces reviewer.
-    role: Mapped[str] = mapped_column(String(20), default="reviewer")
+    role: Mapped[str] = mapped_column(String(20), default=Role.REVIEWER)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
@@ -36,7 +37,7 @@ class Candidate(Base):
     name: Mapped[str] = mapped_column(String(160))
     email: Mapped[str] = mapped_column(String(255), index=True)
     role_applied: Mapped[str] = mapped_column(String(120))
-    status: Mapped[str] = mapped_column(String(20), default="new")
+    status: Mapped[str] = mapped_column(String(20), default=CandidateStatus.NEW)
     skills: Mapped[list] = mapped_column(JSON, default=list)
     internal_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)

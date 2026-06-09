@@ -8,7 +8,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .config import get_settings
+from .constants import Role
 from .database import get_db
+from .messages import AuthMessages
 from .models import User
 
 settings = get_settings()
@@ -37,7 +39,7 @@ async def get_current_user(
 ) -> User:
     creds_error = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
+        detail=AuthMessages.COULD_NOT_VALIDATE_CREDENTIALS,
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
@@ -57,9 +59,10 @@ async def get_current_user(
 
 
 def require_admin(user: User = Depends(get_current_user)) -> User:
-    if user.role != "admin":
+    if user.role != Role.ADMIN:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=AuthMessages.ADMIN_ACCESS_REQUIRED,
         )
     return user
 

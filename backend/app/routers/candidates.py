@@ -6,7 +6,9 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import get_current_user, require_admin
+from ..constants import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, CandidateStatus, Role
 from ..database import get_db
+from ..messages import CandidateMessages
 from ..models import Candidate, User
 from ..schemas import (
     CandidateCreate,
@@ -23,6 +25,14 @@ from ..services import candidate_service as svc
 router = APIRouter(prefix="/candidates", tags=["candidates"])
 
 
+async def get_active_candidate(db: AsyncSession, candidate_id: int) -> Candidate:
+    """Fetch a candidate or raise 404. Archived rows count as gone."""
+    candidate = await svc.get_candidate(db, candidate_id)
+    if candidate is None or candidate.status == CandidateStatus.ARCHIVED:
+        raise HTTPException(status_code=404, detail=CandidateMessages.NOT_FOUND)
+    return candidate
+
+
 @router.get("", response_model=PaginatedCandidates)
 async def list_candidates(
     status: str | None = None,
@@ -30,7 +40,7 @@ async def list_candidates(
     skill: str | None = None,
     keyword: str | None = None,
     offset: int = Query(0, ge=0),
-    limit: int = Query(20, ge=1, le=50),
+    limit: int = Query(DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
@@ -77,11 +87,9 @@ async def get_candidate(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    candidate = await svc.get_candidate(db, candidate_id)
-    if candidate is None or candidate.status == "archived":
-        raise HTTPException(status_code=404, detail="Candidate not found")
+    candidate = await get_active_candidate(db, candidate_id)
 
-    is_admin = user.role == "admin"
+    is_admin = user.role == Role.ADMIN
     # reviewers only ever see their own scores
     reviewer_filter = None if is_admin else user.id
     scores = await svc.scores_for_candidate(db, candidate_id, reviewer_filter)
@@ -95,9 +103,7 @@ async def submit_score(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    candidate = await svc.get_candidate(db, candidate_id)
-    if candidate is None or candidate.status == "archived":
-        raise HTTPException(status_code=404, detail="Candidate not found")
+    await get_active_candidate(db, candidate_id)
 
     score = await svc.add_score(
         db,
@@ -116,9 +122,7 @@ async def trigger_summary(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    candidate = await svc.get_candidate(db, candidate_id)
-    if candidate is None or candidate.status == "archived":
-        raise HTTPException(status_code=404, detail="Candidate not found")
+    candidate = await get_active_candidate(db, candidate_id)
 
     # pass scores in so the summary can mention the average without lazy-loading
     scores = await svc.scores_for_candidate(db, candidate_id)
@@ -133,9 +137,7 @@ async def update_notes(
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
-    candidate = await svc.get_candidate(db, candidate_id)
-    if candidate is None or candidate.status == "archived":
-        raise HTTPException(status_code=404, detail="Candidate not found")
+    candidate = await get_active_candidate(db, candidate_id)
 
     candidate.internal_notes = body.internal_notes
     await db.commit()
@@ -152,7 +154,7 @@ async def delete_candidate(
 ):
     candidate = await svc.get_candidate(db, candidate_id)
     if candidate is None:
-        raise HTTPException(status_code=404, detail="Candidate not found")
+        raise HTTPException(status_code=404, detail=CandidateMessages.NOT_FOUND)
     # soft delete only - we archive instead of dropping the row
     await svc.soft_delete(db, candidate)
 
@@ -168,11 +170,9 @@ async def stream_scores(
     Polls the DB once a second and emits an event whenever a new score lands.
     A production build would replace the poll with a pub/sub channel.
     """
-    candidate = await svc.get_candidate(db, candidate_id)
-    if candidate is None or candidate.status == "archived":
-        raise HTTPException(status_code=404, detail="Candidate not found")
+    await get_active_candidate(db, candidate_id)
 
-    reviewer_filter = None if user.role == "admin" else user.id
+    reviewer_filter = None if user.role == Role.ADMIN else user.id
 
     async def event_source():
         last_seen = -1

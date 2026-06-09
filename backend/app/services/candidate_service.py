@@ -3,11 +3,11 @@ import asyncio
 from sqlalchemy import String, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..config import get_settings
+from ..constants import CandidateStatus
 from ..models import Candidate, Score
 
-# statuses a candidate can be in. "archived" is the soft-delete state and is
-# hidden from the default listing.
-ACTIVE_STATUSES = ("new", "reviewed", "hired", "rejected")
+settings = get_settings()
 
 
 async def list_candidates(
@@ -32,7 +32,7 @@ async def list_candidates(
         stmt = stmt.where(Candidate.status == status)
     else:
         # don't surface archived (soft-deleted) candidates by default
-        stmt = stmt.where(Candidate.status != "archived")
+        stmt = stmt.where(Candidate.status != CandidateStatus.ARCHIVED)
 
     if role_applied:
         stmt = stmt.where(Candidate.role_applied == role_applied)
@@ -107,9 +107,9 @@ async def generate_summary(
     A real implementation would await an httpx call to the model provider here.
     We sleep instead so the async behaviour (and the frontend loading state) is
     exercised end to end. asyncio.sleep yields the event loop, so other
-    requests keep being served during the 2s wait.
+    requests keep being served during the wait.
     """
-    await asyncio.sleep(2)
+    await asyncio.sleep(settings.summary_delay_seconds)
 
     avg = ""
     if scores:
@@ -130,5 +130,5 @@ async def generate_summary(
 
 async def soft_delete(db: AsyncSession, candidate: Candidate) -> None:
     # never actually drop the row - we just archive it
-    candidate.status = "archived"
+    candidate.status = CandidateStatus.ARCHIVED
     await db.commit()

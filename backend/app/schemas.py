@@ -1,7 +1,15 @@
 from datetime import datetime
-from typing import Literal, Optional
+from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+
+from .constants import (
+    CREATABLE_STATUSES,
+    MAX_SCORE,
+    MIN_SCORE,
+    CandidateStatus,
+    Role,
+)
 
 # ---- auth ----
 
@@ -20,7 +28,7 @@ class LoginRequest(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
-    role: str
+    role: Role
 
 
 class UserOut(BaseModel):
@@ -28,7 +36,7 @@ class UserOut(BaseModel):
 
     id: int
     email: EmailStr
-    role: str
+    role: Role
 
 
 # ---- scores ----
@@ -36,7 +44,7 @@ class UserOut(BaseModel):
 
 class ScoreCreate(BaseModel):
     category: str = Field(min_length=1, max_length=80)
-    score: int = Field(ge=1, le=5)
+    score: int = Field(ge=MIN_SCORE, le=MAX_SCORE)
     note: Optional[str] = None
 
 
@@ -62,7 +70,7 @@ class CandidateListItem(BaseModel):
     name: str
     email: EmailStr
     role_applied: str
-    status: str
+    status: CandidateStatus
     skills: list[str]
     created_at: datetime
 
@@ -79,8 +87,16 @@ class CandidateCreate(BaseModel):
     email: EmailStr
     role_applied: str
     skills: list[str] = []
-    status: Literal["new", "reviewed", "hired", "rejected"] = "new"
+    status: CandidateStatus = CandidateStatus.NEW
     internal_notes: Optional[str] = None
+
+    @field_validator("status")
+    @classmethod
+    def status_must_be_creatable(cls, value: CandidateStatus) -> CandidateStatus:
+        # you archive a candidate via DELETE, you don't create one as archived
+        if value not in CREATABLE_STATUSES:
+            raise ValueError("candidates cannot be created with the archived status")
+        return value
 
 
 class NotesUpdate(BaseModel):

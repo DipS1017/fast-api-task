@@ -9,11 +9,12 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .auth import hash_password
+from .constants import CandidateStatus, Role
 from .models import Candidate, User
 
 DEMO_USERS = [
-    ("admin@techkraft.io", "admin1234", "admin"),
-    ("reviewer@techkraft.io", "review1234", "reviewer"),
+    ("admin@techkraft.io", "admin1234", Role.ADMIN),
+    ("reviewer@techkraft.io", "review1234", Role.REVIEWER),
 ]
 
 DEMO_CANDIDATES = [
@@ -21,7 +22,7 @@ DEMO_CANDIDATES = [
         "name": "Aria Khanal",
         "email": "aria.khanal@gmail.com",
         "role_applied": "Backend Engineer",
-        "status": "new",
+        "status": CandidateStatus.NEW,
         "skills": ["python", "fastapi", "postgres"],
         "internal_notes": "Strong referral from the platform team.",
     },
@@ -29,7 +30,7 @@ DEMO_CANDIDATES = [
         "name": "Bishal Thapa",
         "email": "bishal.thapa@outlook.com",
         "role_applied": "Frontend Engineer",
-        "status": "reviewed",
+        "status": CandidateStatus.REVIEWED,
         "skills": ["react", "typescript", "css"],
         "internal_notes": "Take-home was clean, schedule onsite.",
     },
@@ -37,7 +38,7 @@ DEMO_CANDIDATES = [
         "name": "Carmen Diaz",
         "email": "carmen.diaz@gmail.com",
         "role_applied": "Backend Engineer",
-        "status": "new",
+        "status": CandidateStatus.NEW,
         "skills": ["python", "django", "redis"],
         "internal_notes": None,
     },
@@ -45,7 +46,7 @@ DEMO_CANDIDATES = [
         "name": "Deepak Rai",
         "email": "deepak.rai@proton.me",
         "role_applied": "Full Stack Engineer",
-        "status": "hired",
+        "status": CandidateStatus.HIRED,
         "skills": ["react", "fastapi", "docker"],
         "internal_notes": "Accepted offer, starts next month.",
     },
