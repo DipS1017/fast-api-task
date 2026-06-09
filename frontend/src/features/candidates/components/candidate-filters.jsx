@@ -8,8 +8,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CANDIDATE_STATUSES } from "@/lib/constants";
 
-const STATUSES = ["new", "reviewed", "hired", "rejected"];
 const ALL = "__all__";
 
 export function CandidateFilters({ filters, onChange }) {
@@ -38,7 +38,7 @@ export function CandidateFilters({ filters, onChange }) {
         </SelectTrigger>
         <SelectContent>
           <SelectItem value={ALL}>All statuses</SelectItem>
-          {STATUSES.map((s) => (
+          {CANDIDATE_STATUSES.map((s) => (
             <SelectItem key={s} value={s} className="capitalize">
               {s}
             </SelectItem>

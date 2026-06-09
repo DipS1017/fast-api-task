@@ -33,6 +33,11 @@ async def get_active_candidate(db: AsyncSession, candidate_id: int) -> Candidate
     return candidate
 
 
+def scores_visible_to(user: User) -> int | None:
+    """Which reviewer's scores a user may see: their own, or all (admins)."""
+    return None if user.role == Role.ADMIN else user.id
+
+
 @router.get("", response_model=PaginatedCandidates)
 async def list_candidates(
     status: str | None = None,
@@ -89,11 +94,10 @@ async def get_candidate(
 ):
     candidate = await get_active_candidate(db, candidate_id)
 
-    is_admin = user.role == Role.ADMIN
-    # reviewers only ever see their own scores
-    reviewer_filter = None if is_admin else user.id
-    scores = await svc.scores_for_candidate(db, candidate_id, reviewer_filter)
-    return _serialize_detail(candidate, scores=scores, is_admin=is_admin)
+    scores = await svc.scores_for_candidate(db, candidate_id, scores_visible_to(user))
+    return _serialize_detail(
+        candidate, scores=scores, is_admin=user.role == Role.ADMIN
+    )
 
 
 @router.post("/{candidate_id}/scores", response_model=ScoreOut, status_code=201)
@@ -172,7 +176,7 @@ async def stream_scores(
     """
     await get_active_candidate(db, candidate_id)
 
-    reviewer_filter = None if user.role == Role.ADMIN else user.id
+    reviewer_filter = scores_visible_to(user)
 
     async def event_source():
         last_seen = -1

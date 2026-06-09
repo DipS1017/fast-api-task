@@ -1,9 +1,9 @@
+import { STORAGE_KEYS } from "./constants";
+
 const BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
-const TOKEN_KEY = "token";
-
 export function getToken() {
-  return localStorage.getItem(TOKEN_KEY);
+  return localStorage.getItem(STORAGE_KEYS.TOKEN);
 }
 
 // FastAPI returns validation errors as a list of objects; flatten to a string.

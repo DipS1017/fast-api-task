@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button";
 import { CandidateFilters } from "@/features/candidates/components/candidate-filters";
 import { CandidateTable } from "@/features/candidates/components/candidate-table";
 import { useCandidatesQuery } from "@/features/candidates/queries";
-
-const PAGE_SIZE = 20;
+import { PAGE_SIZE } from "@/lib/constants";
 
 const EMPTY_FILTERS = {
   status: "",

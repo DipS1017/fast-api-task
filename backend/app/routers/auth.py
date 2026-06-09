@@ -22,7 +22,8 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     existing = await get_user_by_email(db, body.email)
     if existing:
         raise HTTPException(
-            status_code=400, detail=AuthMessages.EMAIL_ALREADY_REGISTERED
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=AuthMessages.EMAIL_ALREADY_REGISTERED,
         )
 
     # role is hardcoded here on purpose - the client can't make itself an admin.

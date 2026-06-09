@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SCORE_VALUES } from "@/lib/constants";
 import { useSubmitScoreMutation } from "../mutations";
 
 const CATEGORIES = ["Technical", "Communication", "Problem Solving", "Culture Fit"];
@@ -49,7 +50,7 @@ export function ScoreForm({ candidateId }) {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {[1, 2, 3, 4, 5].map((n) => (
+            {SCORE_VALUES.map((n) => (
               <SelectItem key={n} value={String(n)}>
                 {n} / 5
               </SelectItem>

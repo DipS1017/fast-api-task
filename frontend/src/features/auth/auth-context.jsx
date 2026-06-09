@@ -1,11 +1,13 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
+import { ROLE, STORAGE_KEYS } from "@/lib/constants";
+
 const AuthContext = createContext(null);
 
 function readSession() {
-  const token = localStorage.getItem("token");
-  const role = localStorage.getItem("role");
+  const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+  const role = localStorage.getItem(STORAGE_KEYS.ROLE);
   return token ? { token, role } : null;
 }
 
@@ -14,14 +16,14 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(readSession);
 
   const signIn = useCallback(({ access_token, role }) => {
-    localStorage.setItem("token", access_token);
-    localStorage.setItem("role", role);
+    localStorage.setItem(STORAGE_KEYS.TOKEN, access_token);
+    localStorage.setItem(STORAGE_KEYS.ROLE, role);
     setSession({ token: access_token, role });
   }, []);
 
   const signOut = useCallback(() => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("role");
+    localStorage.removeItem(STORAGE_KEYS.TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.ROLE);
     setSession(null);
     // drop any cached candidate data belonging to the previous user
     queryClient.clear();
@@ -31,7 +33,7 @@ export function AuthProvider({ children }) {
     () => ({
       session,
       isAuthenticated: Boolean(session),
-      isAdmin: session?.role === "admin",
+      isAdmin: session?.role === ROLE.ADMIN,
       signIn,
       signOut,
     }),
