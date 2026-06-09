@@ -1,0 +1,27 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      # demo-only values - override with a real .env before any real use
+      SECRET_KEY: ${SECRET_KEY:-local-dev-secret-change-me}
+      ACCESS_TOKEN_EXPIRE_MINUTES: 60
+      DATABASE_URL: sqlite+aiosqlite:////data/app.db
+      SEED_DEMO_DATA: "true"
+    volumes:
+      - backend_data:/data
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # the browser talks to the backend on the host, so use localhost:8000
+        VITE_API_URL: http://localhost:8000
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+volumes:
+  backend_data:
