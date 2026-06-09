@@ -1,0 +1,83 @@
+import { Link } from "react-router-dom";
+
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { StatusBadge } from "./status-badge";
+
+export function CandidateTable({ candidates, loading }) {
+  return (
+    <div className="rounded-xl border border-border bg-card">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Role</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Skills</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {loading ? (
+            <LoadingRows />
+          ) : candidates.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={4}
+                className="py-10 text-center text-muted-foreground"
+              >
+                No candidates match these filters.
+              </TableCell>
+            </TableRow>
+          ) : (
+            candidates.map((c) => (
+              <TableRow key={c.id}>
+                <TableCell>
+                  <Link
+                    to={`/candidates/${c.id}`}
+                    className="font-medium hover:underline"
+                  >
+                    {c.name}
+                  </Link>
+                  <div className="text-xs text-muted-foreground">{c.email}</div>
+                </TableCell>
+                <TableCell>{c.role_applied}</TableCell>
+                <TableCell>
+                  <StatusBadge status={c.status} />
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-1">
+                    {c.skills.map((s) => (
+                      <Badge key={s} variant="outline" className="font-normal">
+                        {s}
+                      </Badge>
+                    ))}
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+function LoadingRows() {
+  return Array.from({ length: 5 }).map((_, i) => (
+    <TableRow key={i}>
+      {Array.from({ length: 4 }).map((__, j) => (
+        <TableCell key={j}>
+          <Skeleton className="h-5 w-full max-w-[160px]" />
+        </TableCell>
+      ))}
+    </TableRow>
+  ));
+}

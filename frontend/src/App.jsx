@@ -1,62 +1,35 @@
-import { Navigate, Link, Route, Routes, useLocation } from "react-router-dom";
-import { useAuth } from "./auth";
-import Login from "./pages/Login";
-import CandidateList from "./pages/CandidateList";
-import CandidateDetail from "./pages/CandidateDetail";
+import { Navigate, Route, Routes } from "react-router-dom";
 
-function RequireAuth({ children }) {
-  const { auth } = useAuth();
-  const location = useLocation();
-  if (!auth) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-  return children;
-}
-
-function TopBar() {
-  const { auth, logout } = useAuth();
-  if (!auth) return null;
-  return (
-    <header className="topbar">
-      <Link to="/" className="brand">
-        TechKraft · Candidate Review
-      </Link>
-      <div className="topbar-right">
-        <span className="role-badge">{auth.role}</span>
-        <button className="link-btn" onClick={logout}>
-          Log out
-        </button>
-      </div>
-    </header>
-  );
-}
+import { RequireAuth } from "@/components/require-auth";
+import { TopBar } from "@/components/layout/top-bar";
+import CandidateDetailPage from "@/pages/candidate-detail-page";
+import CandidateListPage from "@/pages/candidate-list-page";
+import LoginPage from "@/pages/login-page";
 
 export default function App() {
   return (
-    <>
+    <div className="min-h-screen bg-background">
       <TopBar />
-      <main className="container">
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route
-            path="/"
-            element={
-              <RequireAuth>
-                <CandidateList />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/candidates/:id"
-            element={
-              <RequireAuth>
-                <CandidateDetail />
-              </RequireAuth>
-            }
-          />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </main>
-    </>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route
+          path="/"
+          element={
+            <RequireAuth>
+              <CandidateListPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/candidates/:id"
+          element={
+            <RequireAuth>
+              <CandidateDetailPage />
+            </RequireAuth>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </div>
   );
 }
