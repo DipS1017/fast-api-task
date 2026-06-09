@@ -2,11 +2,13 @@
 
 An internal tool for TechKraft's recruitment team. Reviewers score candidates
 across categories and trigger AI summaries; admins get full visibility plus the
-internal notes. Built with FastAPI + SQLite on the backend and React (Vite) on
-the frontend, wired together with Docker Compose.
+internal notes. Built with FastAPI + SQLite on the backend and React (Vite,
+TanStack Query, shadcn/ui) on the frontend, wired together with Docker Compose.
 
 - **Backend:** FastAPI (async) on **port 8000**
-- **Frontend:** React + Vite, built static and served by nginx on **port 5173**
+- **Frontend:** React + Vite with TanStack Query for server state and
+  shadcn/ui + Tailwind for the UI, built static and served by nginx on
+  **port 5173**
 
 ---
 
@@ -119,6 +121,40 @@ curl -s -X POST http://localhost:8000/auth/register \
 
 ---
 
+## Frontend structure
+
+The frontend is organised by **feature**, not by file type, so everything that
+belongs to one slice of the app sits together:
+
+```
+src/
+├── components/
+│   ├── ui/              # shadcn/ui primitives (button, card, select, table…)
+│   └── layout/          # top bar, route guard
+├── features/
+│   ├── auth/
+│   │   ├── api.js        # raw network calls
+│   │   ├── mutations.js  # useLoginMutation / useRegisterMutation
+│   │   ├── auth-context.jsx
+│   │   └── components/
+│   └── candidates/
+│       ├── api.js
+│       ├── queries.js    # useCandidatesQuery / useCandidateQuery (+ query keys)
+│       ├── mutations.js  # score / summary / notes mutations
+│       └── components/
+├── lib/                 # api client, query client, cn() helper
+└── pages/               # thin route components that compose features
+```
+
+Server state lives in **TanStack Query** rather than `useEffect` + `useState`.
+Reads and writes are deliberately separated: `queries.js` holds the `useQuery`
+hooks and the shared query-key factory, `mutations.js` holds the `useMutation`
+hooks. Each mutation invalidates the relevant query on success (e.g. submitting
+a score invalidates the candidate detail query) so the UI always re-renders from
+fresh server data instead of being hand-patched.
+
+---
+
 ## The debugging signal
 
 The snippet from the hypothetical service layer:
@@ -226,6 +262,11 @@ pagination (`WHERE created_at < :last_seen`).
   `LIKE`, which works fine for this dataset but won't use an index. With more time
   I'd normalise skills into their own table (or move to Postgres and use a `GIN`
   index on a JSONB column) so that filter stays fast at scale.
+- On the frontend I leaned on **TanStack Query** for all server state and
+  **shadcn/ui** for the components. Letting query invalidation drive re-renders
+  (instead of manually refetching after each mutation) kept the components a lot
+  thinner than my usual `useEffect` approach — with more time I'd add optimistic
+  updates for scoring so the new row appears before the round-trip finishes.
 - Given more time I'd also add **refresh tokens**, switch the JWT to an httpOnly
   cookie, and put **Alembic** migrations in front of the `create_all` I'm using
   to bootstrap the schema on startup.
