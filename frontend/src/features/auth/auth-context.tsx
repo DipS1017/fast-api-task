@@ -1,0 +1,74 @@
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import { useQueryClient } from "@tanstack/react-query";
+
+import { ROLE, STORAGE_KEYS } from "@/lib/constants";
+import type { Role, TokenResponse } from "@/lib/types";
+
+interface Session {
+  token: string;
+  role: string;
+}
+
+interface AuthContextValue {
+  session: Session | null;
+  isAuthenticated: boolean;
+  isAdmin: boolean;
+  signIn: (token: TokenResponse) => void;
+  signOut: () => void;
+}
+
+const AuthContext = createContext<AuthContextValue | null>(null);
+
+function readSession(): Session | null {
+  const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+  const role = localStorage.getItem(STORAGE_KEYS.ROLE);
+  return token ? { token, role: role ?? "" } : null;
+}
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
+  const [session, setSession] = useState<Session | null>(readSession);
+
+  const signIn = useCallback(
+    ({ access_token, role }: { access_token: string; role: Role }) => {
+      localStorage.setItem(STORAGE_KEYS.TOKEN, access_token);
+      localStorage.setItem(STORAGE_KEYS.ROLE, role);
+      setSession({ token: access_token, role });
+    },
+    []
+  );
+
+  const signOut = useCallback(() => {
+    localStorage.removeItem(STORAGE_KEYS.TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.ROLE);
+    setSession(null);
+    // drop any cached candidate data belonging to the previous user
+    queryClient.clear();
+  }, [queryClient]);
+
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      session,
+      isAuthenticated: Boolean(session),
+      isAdmin: session?.role === ROLE.ADMIN,
+      signIn,
+      signOut,
+    }),
+    [session, signIn, signOut]
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth(): AuthContextValue {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used within an AuthProvider");
+  return ctx;
+}

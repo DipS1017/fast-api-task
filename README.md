@@ -2,13 +2,14 @@
 
 An internal tool for TechKraft's recruitment team. Reviewers score candidates
 across categories and trigger AI summaries; admins get full visibility plus the
-internal notes. Built with FastAPI + SQLite on the backend and React (Vite,
-TanStack Query, shadcn/ui) on the frontend, wired together with Docker Compose.
+internal notes. Built with FastAPI + SQLite on the backend and React + Vite
+(TypeScript, TanStack Query, shadcn/ui) on the frontend, wired together with
+Docker Compose.
 
 - **Backend:** FastAPI (async) on **port 8000**
-- **Frontend:** React + Vite with TanStack Query for server state and
-  shadcn/ui + Tailwind for the UI, built static and served by nginx on
-  **port 5173**
+- **Frontend:** React + Vite in **TypeScript**, with TanStack Query for server
+  state and shadcn/ui + Tailwind for the UI, built static and served by nginx
+  on **port 5173**
 
 ---
 
