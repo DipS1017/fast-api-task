@@ -6,6 +6,15 @@ export function getToken(): string | null {
   return localStorage.getItem(STORAGE_KEYS.TOKEN);
 }
 
+// Called when an authenticated request comes back 401 (token expired/invalid).
+// The auth layer registers its signOut here so a dead token boots the user back
+// to the login page instead of leaving them staring at error messages.
+let onUnauthorized: (() => void) | null = null;
+
+export function setUnauthorizedHandler(handler: (() => void) | null): void {
+  onUnauthorized = handler;
+}
+
 // FastAPI returns validation errors as a list of objects; flatten to a string.
 function detailToMessage(detail: unknown): string | null {
   if (!detail) return null;
@@ -41,6 +50,13 @@ export async function apiFetch<T>(
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
+
+  // a 401 on a request that *carried* a token means the session is dead
+  // (expired/invalid) - sign the user out. a 401 with no token is just a failed
+  // login and is left for the caller to surface.
+  if (resp.status === 401 && token) {
+    onUnauthorized?.();
+  }
 
   if (resp.status === 204) return null as T;
 

@@ -2,12 +2,14 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
+import { setUnauthorizedHandler } from "@/lib/api-client";
 import { ROLE, STORAGE_KEYS } from "@/lib/constants";
 import type { Role, TokenResponse } from "@/lib/types";
 
@@ -52,6 +54,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // drop any cached candidate data belonging to the previous user
     queryClient.clear();
   }, [queryClient]);
+
+  // let the api client sign us out when a token is rejected (expiry/invalid)
+  useEffect(() => {
+    setUnauthorizedHandler(signOut);
+    return () => setUnauthorizedHandler(null);
+  }, [signOut]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
