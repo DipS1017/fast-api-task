@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
+import { Eye } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -22,6 +24,7 @@ export function CandidateTable({ candidates, loading }) {
             <TableHead>Role</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Skills</TableHead>
+            <TableHead className="w-0 text-right">Details</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -30,7 +33,7 @@ export function CandidateTable({ candidates, loading }) {
           ) : candidates.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={4}
+                colSpan={5}
                 className="py-10 text-center text-muted-foreground"
               >
                 No candidates match these filters.
@@ -61,6 +64,13 @@ export function CandidateTable({ candidates, loading }) {
                     ))}
                   </div>
                 </TableCell>
+                <TableCell className="text-right">
+                  <Button asChild variant="outline" size="sm">
+                    <Link to={`/candidates/${c.id}`} aria-label={`View ${c.name}`}>
+                      <Eye className="size-4" /> View
+                    </Link>
+                  </Button>
+                </TableCell>
               </TableRow>
             ))
           )}
@@ -73,7 +83,7 @@ export function CandidateTable({ candidates, loading }) {
 function LoadingRows() {
   return Array.from({ length: 5 }).map((_, i) => (
     <TableRow key={i}>
-      {Array.from({ length: 4 }).map((__, j) => (
+      {Array.from({ length: 5 }).map((__, j) => (
         <TableCell key={j}>
           <Skeleton className="h-5 w-full max-w-[160px]" />
         </TableCell>
