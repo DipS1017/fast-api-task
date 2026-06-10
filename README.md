@@ -166,6 +166,9 @@ hooks. Each mutation invalidates the relevant query on success (e.g. submitting
 a score invalidates the candidate detail query) so the UI always re-renders from
 fresh server data instead of being hand-patched.
 
+The candidate list's filters and page live in the URL query string (via
+**nuqs**), so a filtered view is shareable, bookmarkable and survives a refresh.
+
 ---
 
 ## The debugging signal
