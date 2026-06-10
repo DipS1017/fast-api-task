@@ -169,6 +169,10 @@ fresh server data instead of being hand-patched.
 The candidate list's filters and page live in the URL query string (via
 **nuqs**), so a filtered view is shareable, bookmarkable and survives a refresh.
 
+Forms (login/register, scoring, internal notes) use **react-hook-form** with
+**zod** schemas for validation, surfaced through the shadcn `Form` components so
+each field shows its own inline error.
+
 ---
 
 ## The debugging signal

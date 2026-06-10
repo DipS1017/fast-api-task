@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -10,23 +12,39 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { loginSchema, registerSchema } from "../schema";
 import { useLoginMutation, useRegisterMutation } from "../mutations";
 
 export function LoginForm() {
   const navigate = useNavigate();
   const [mode, setMode] = useState("login"); // "login" | "register"
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
 
   const loginMutation = useLoginMutation();
   const registerMutation = useRegisterMutation();
   const active = mode === "login" ? loginMutation : registerMutation;
 
-  function onSubmit(e) {
-    e.preventDefault();
-    active.mutate({ email, password }, { onSuccess: () => navigate("/") });
+  const form = useForm({
+    resolver: zodResolver(mode === "login" ? loginSchema : registerSchema),
+    defaultValues: { email: "", password: "" },
+  });
+
+  function onSubmit(values) {
+    active.mutate(values, { onSuccess: () => navigate("/") });
+  }
+
+  function toggleMode() {
+    setMode((m) => (m === "login" ? "register" : "login"));
+    form.reset();
+    active.reset();
   }
 
   return (
@@ -38,46 +56,53 @@ export function LoginForm() {
         <CardDescription>Internal candidate review dashboard</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@techkraft.io"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="email"
+                      placeholder="you@techkraft.io"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <Input type="password" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
 
-          {active.isError && (
-            <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {active.error.message}
-            </p>
-          )}
+            {active.isError && (
+              <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {active.error.message}
+              </p>
+            )}
 
-          <Button type="submit" className="w-full" disabled={active.isPending}>
-            {active.isPending && <Loader2 className="size-4 animate-spin" />}
-            {mode === "login" ? "Sign in" : "Register"}
-          </Button>
-        </form>
+            <Button type="submit" className="w-full" disabled={active.isPending}>
+              {active.isPending && <Loader2 className="size-4 animate-spin" />}
+              {mode === "login" ? "Sign in" : "Register"}
+            </Button>
+          </form>
+        </Form>
 
-        <Button
-          variant="link"
-          className="w-full"
-          onClick={() => setMode(mode === "login" ? "register" : "login")}
-        >
+        <Button variant="link" className="w-full" onClick={toggleMode}>
           {mode === "login"
             ? "Need an account? Register as a reviewer"
             : "Already have an account? Sign in"}
