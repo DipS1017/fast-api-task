@@ -1,4 +1,4 @@
-import { parseAsInteger, parseAsString, useQueryState, useQueryStates } from "nuqs";
+import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 
 import { Button } from "@/components/ui/button";
 import { CandidateFilters } from "@/features/candidates/components/candidate-filters";
@@ -6,25 +6,21 @@ import { CandidateTable } from "@/features/candidates/components/candidate-table
 import { useCandidatesQuery } from "@/features/candidates/queries";
 import { PAGE_SIZE } from "@/lib/constants";
 
-// nuqs keeps these in the URL query string, so filters + page are shareable,
-// bookmarkable and survive a refresh. Empty/default values drop out of the URL.
-const filterParsers = {
+// nuqs keeps filters + page in the URL query string, so a filtered view is
+// shareable, bookmarkable and survives a refresh. Defaults drop out of the URL.
+// Keeping page in the same group means a filter change is one atomic URL update
+// (one render, one fetch) rather than two.
+const queryParsers = {
   status: parseAsString.withDefault(""),
   role_applied: parseAsString.withDefault(""),
   skill: parseAsString.withDefault(""),
   keyword: parseAsString.withDefault(""),
+  page: parseAsInteger.withDefault(1),
 };
 
 export default function CandidateListPage() {
-  // filter typing replaces history so it doesn't pile up back-button entries
-  const [filters, setFilters] = useQueryStates(filterParsers, {
-    history: "replace",
-  });
-  // paging pushes history so the back button steps through pages
-  const [page, setPage] = useQueryState(
-    "page",
-    parseAsInteger.withDefault(1).withOptions({ history: "push" })
-  );
+  const [params, setParams] = useQueryStates(queryParsers);
+  const { page, ...filters } = params;
 
   const offset = (page - 1) * PAGE_SIZE;
   const query = useCandidatesQuery({ ...filters, offset, limit: PAGE_SIZE });
@@ -32,9 +28,14 @@ export default function CandidateListPage() {
   const totalPages = Math.max(1, Math.ceil(data.total / PAGE_SIZE));
 
   function onFiltersChange(next) {
-    // a filter change resets to page 1; both updates batch into one navigation
-    setFilters(next);
-    setPage(1);
+    // a filter change resets to page 1; replace history so typing doesn't pile
+    // up back-button entries
+    setParams({ ...next, page: 1 }, { history: "replace" });
+  }
+
+  function goToPage(nextPage) {
+    // push history so the back button steps through pages
+    setParams({ page: nextPage }, { history: "push" });
   }
 
   return (
@@ -56,7 +57,7 @@ export default function CandidateListPage() {
           variant="outline"
           size="sm"
           disabled={page <= 1}
-          onClick={() => setPage(page - 1)}
+          onClick={() => goToPage(page - 1)}
         >
           ← Prev
         </Button>
@@ -67,7 +68,7 @@ export default function CandidateListPage() {
           variant="outline"
           size="sm"
           disabled={page >= totalPages}
-          onClick={() => setPage(page + 1)}
+          onClick={() => goToPage(page + 1)}
         >
           Next →
         </Button>

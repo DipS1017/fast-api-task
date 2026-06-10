@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
@@ -9,12 +10,44 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CANDIDATE_STATUSES } from "@/lib/constants";
+import { useDebouncedCallback } from "@/lib/use-debounced-callback";
 
 const ALL = "__all__";
+const DEBOUNCE_MS = 350;
 
 export function CandidateFilters({ filters, onChange }) {
-  function set(key, value) {
-    onChange({ ...filters, [key]: value });
+  // The text fields update locally on every keystroke for a snappy input, but
+  // only push to the URL / query once typing settles. The status select is a
+  // discrete choice, so it applies immediately.
+  const [text, setText] = useState({
+    keyword: filters.keyword,
+    role_applied: filters.role_applied,
+    skill: filters.skill,
+  });
+
+  // re-sync local text when filters change from outside (deep link, refresh)
+  useEffect(() => {
+    setText({
+      keyword: filters.keyword,
+      role_applied: filters.role_applied,
+      skill: filters.skill,
+    });
+  }, [filters.keyword, filters.role_applied, filters.skill]);
+
+  const pushText = useDebouncedCallback((nextText) => {
+    onChange({ ...filters, ...nextText });
+  }, DEBOUNCE_MS);
+
+  function onText(key, value) {
+    const nextText = { ...text, [key]: value };
+    setText(nextText);
+    pushText(nextText);
+  }
+
+  function onStatus(value) {
+    // flush any pending text edit alongside the status change
+    pushText.cancel();
+    onChange({ ...filters, ...text, status: value });
   }
 
   return (
@@ -24,14 +57,14 @@ export function CandidateFilters({ filters, onChange }) {
         <Input
           className="pl-8"
           placeholder="Search name or email…"
-          value={filters.keyword}
-          onChange={(e) => set("keyword", e.target.value)}
+          value={text.keyword}
+          onChange={(e) => onText("keyword", e.target.value)}
         />
       </div>
 
       <Select
         value={filters.status || ALL}
-        onValueChange={(v) => set("status", v === ALL ? "" : v)}
+        onValueChange={(v) => onStatus(v === ALL ? "" : v)}
       >
         <SelectTrigger>
           <SelectValue placeholder="All statuses" />
@@ -48,14 +81,14 @@ export function CandidateFilters({ filters, onChange }) {
 
       <Input
         placeholder="Role applied"
-        value={filters.role_applied}
-        onChange={(e) => set("role_applied", e.target.value)}
+        value={text.role_applied}
+        onChange={(e) => onText("role_applied", e.target.value)}
       />
 
       <Input
         placeholder="Skill (e.g. react)"
-        value={filters.skill}
-        onChange={(e) => set("skill", e.target.value)}
+        value={text.skill}
+        onChange={(e) => onText("skill", e.target.value)}
       />
     </div>
   );
