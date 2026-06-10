@@ -37,16 +37,26 @@ The backend seeds two demo accounts and a handful of candidates on first boot:
 
 ### Option B — run the services directly
 
-**Backend**
+**Backend** — the quick way (creates the venv, installs, migrates, then runs):
+
+```bash
+cd backend
+cp .env.example .env          # adjust SECRET_KEY etc.
+make dev                       # http://localhost:8000  (run `make help` for more)
+```
+
+<details>
+<summary>…or the same thing by hand</summary>
 
 ```bash
 cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env          # adjust SECRET_KEY etc.
+cp .env.example .env
 alembic upgrade head          # create / migrate the schema
 uvicorn app.main:app --reload --port 8000
 ```
+</details>
 
 > The Docker setup runs `alembic upgrade head` automatically on container
 > start; you only need the explicit command when running the backend directly.
@@ -64,8 +74,7 @@ npm run dev                    # serves on http://localhost:5173
 
 ```bash
 cd backend
-pip install -r requirements.txt
-pytest
+make test          # or: pip install -r requirements.txt && pytest
 ```
 
 ---
