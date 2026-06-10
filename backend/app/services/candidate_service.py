@@ -35,7 +35,8 @@ async def list_candidates(
         stmt = stmt.where(Candidate.status != CandidateStatus.ARCHIVED)
 
     if role_applied:
-        stmt = stmt.where(Candidate.role_applied == role_applied)
+        # partial, case-insensitive - "backend" should find "Backend Engineer"
+        stmt = stmt.where(Candidate.role_applied.ilike(f"%{role_applied}%"))
 
     if keyword:
         like = f"%{keyword}%"
@@ -45,9 +46,10 @@ async def list_candidates(
 
     if skill:
         # skills is a JSON array; on SQLite we match against the serialised
-        # text. Good enough for this dataset - see the README for the note on
-        # doing this properly at scale.
-        stmt = stmt.where(Candidate.skills.cast(String).ilike(f'%"{skill}"%'))
+        # text with a plain substring ilike (so "rea" finds "react"). Good
+        # enough for this dataset - see the README for the note on doing this
+        # properly at scale.
+        stmt = stmt.where(Candidate.skills.cast(String).ilike(f"%{skill}%"))
 
     count_stmt = select(func.count()).select_from(stmt.subquery())
     total = (await db.execute(count_stmt)).scalar_one()

@@ -17,6 +17,41 @@ async def register_reviewer(client, email: str, password: str = "secret123") -> 
     return resp.json()["access_token"]
 
 
+async def test_filters_are_partial_and_case_insensitive(
+    client, session_maker, admin_token
+):
+    await make_candidate(
+        session_maker,
+        name="Backend Person",
+        email="be@gmail.com",
+        role_applied="Backend Engineer",
+        skills=["python", "fastapi"],
+    )
+    await make_candidate(
+        session_maker,
+        name="Frontend Person",
+        email="fe@gmail.com",
+        role_applied="Frontend Engineer",
+        skills=["react", "typescript"],
+    )
+
+    async def names(query):
+        resp = await client.get(
+            f"/candidates?{query}", headers=await auth_header(admin_token)
+        )
+        return sorted(c["name"] for c in resp.json()["items"])
+
+    # role_applied is a partial, case-insensitive match (not exact equality)
+    assert await names("role_applied=backend") == ["Backend Person"]
+    assert await names("role_applied=ENGINEER") == [
+        "Backend Person",
+        "Frontend Person",
+    ]
+    # skill matches a partial token too
+    assert await names("skill=rea") == ["Frontend Person"]
+    assert await names("skill=PYTHON") == ["Backend Person"]
+
+
 async def test_admin_can_create_candidate(client, admin_token):
     resp = await client.post(
         "/candidates",
