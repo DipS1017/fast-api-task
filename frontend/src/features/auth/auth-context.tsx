@@ -11,7 +11,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { setUnauthorizedHandler } from "@/lib/api-client";
 import { ROLE, STORAGE_KEYS } from "@/lib/constants";
-import type { Role, TokenResponse } from "@/lib/types";
+import type { TokenResponse } from "@/lib/types";
 
 interface Session {
   token: string;
@@ -39,8 +39,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(readSession);
 
   const signIn = useCallback(
-    ({ access_token, role }: { access_token: string; role: Role }) => {
+    ({ access_token, refresh_token, role }: TokenResponse) => {
       localStorage.setItem(STORAGE_KEYS.TOKEN, access_token);
+      localStorage.setItem(STORAGE_KEYS.REFRESH, refresh_token);
       localStorage.setItem(STORAGE_KEYS.ROLE, role);
       setSession({ token: access_token, role });
     },
@@ -49,6 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(() => {
     localStorage.removeItem(STORAGE_KEYS.TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.REFRESH);
     localStorage.removeItem(STORAGE_KEYS.ROLE);
     setSession(null);
     // drop any cached candidate data belonging to the previous user

@@ -33,5 +33,6 @@ export const PAGE_SIZE = 20;
 // localStorage keys for the auth session
 export const STORAGE_KEYS = {
   TOKEN: "token",
+  REFRESH: "refresh_token",
   ROLE: "role",
 } as const;

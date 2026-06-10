@@ -15,7 +15,10 @@ class Settings(BaseSettings):
     """
 
     secret_key: str = Field(default="dev-secret-do-not-use-in-prod", min_length=8)
-    access_token_expire_minutes: int = Field(default=60, gt=0)
+    # access tokens are short-lived; the client silently swaps an expired one for
+    # a fresh access token using the longer-lived refresh token.
+    access_token_expire_minutes: int = Field(default=15, gt=0)
+    refresh_token_expire_minutes: int = Field(default=60 * 24 * 7, gt=0)  # 7 days
     algorithm: str = "HS256"
 
     database_url: str = "sqlite+aiosqlite:///./app.db"

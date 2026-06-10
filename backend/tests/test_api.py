@@ -113,6 +113,38 @@ async def test_register_always_creates_reviewer(client):
     assert me.json()["role"] == "reviewer"
 
 
+async def test_refresh_issues_a_working_new_access_token(client):
+    reg = await client.post(
+        "/auth/register",
+        json={"email": "refreshme@gmail.com", "password": "secret123"},
+    )
+    refresh_token = reg.json()["refresh_token"]
+
+    resp = await client.post("/auth/refresh", json={"refresh_token": refresh_token})
+    assert resp.status_code == 200
+    new_access = resp.json()["access_token"]
+
+    me = await client.get("/auth/me", headers=await auth_header(new_access))
+    assert me.status_code == 200
+    assert me.json()["email"] == "refreshme@gmail.com"
+
+
+async def test_refresh_rejects_garbage(client):
+    resp = await client.post("/auth/refresh", json={"refresh_token": "not-a-token"})
+    assert resp.status_code == 401
+
+
+async def test_access_token_cannot_be_used_as_refresh(client):
+    reg = await client.post(
+        "/auth/register",
+        json={"email": "mixup@gmail.com", "password": "secret123"},
+    )
+    access = reg.json()["access_token"]
+    # an access token presented to /refresh must be rejected (type mismatch)
+    resp = await client.post("/auth/refresh", json={"refresh_token": access})
+    assert resp.status_code == 401
+
+
 async def test_reviewer_only_sees_own_scores(client, session_maker):
     candidate_id = await make_candidate(session_maker)
 

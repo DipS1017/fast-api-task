@@ -87,7 +87,8 @@ All `/candidates` routes require a bearer token (`Authorization: Bearer <token>`
 | Method | Path                          | Who         | Notes                                   |
 |--------|-------------------------------|-------------|-----------------------------------------|
 | POST   | `/auth/register`              | public      | always creates a **reviewer**           |
-| POST   | `/auth/login`                 | public      | returns a JWT + role                    |
+| POST   | `/auth/login`                 | public      | returns access + refresh tokens + role  |
+| POST   | `/auth/refresh`               | public      | swap a refresh token for a fresh pair   |
 | GET    | `/auth/me`                    | any user    | current user                            |
 | GET    | `/candidates`                 | any user    | filters + pagination                    |
 | POST   | `/candidates`                 | admin       | create a candidate                      |
@@ -104,10 +105,17 @@ email). **Pagination:** `offset` (default 0) + `limit` (default 20, max 50).
 ### Example curl session
 
 ```bash
-# 1. log in as the admin and capture the token
-TOKEN=$(curl -s -X POST http://localhost:8000/auth/login \
+# 1. log in as the admin and capture the tokens
+LOGIN=$(curl -s -X POST http://localhost:8000/auth/login \
   -H 'Content-Type: application/json' \
-  -d '{"email":"admin@techkraft.io","password":"admin1234"}' | jq -r .access_token)
+  -d '{"email":"admin@techkraft.io","password":"admin1234"}')
+TOKEN=$(echo "$LOGIN" | jq -r .access_token)
+REFRESH=$(echo "$LOGIN" | jq -r .refresh_token)
+
+# 1b. when the access token expires, swap the refresh token for a fresh pair
+TOKEN=$(curl -s -X POST http://localhost:8000/auth/refresh \
+  -H 'Content-Type: application/json' \
+  -d "{\"refresh_token\":\"$REFRESH\"}" | jq -r .access_token)
 
 # 2. list backend candidates, page size 10
 curl -s "http://localhost:8000/candidates?role_applied=Backend%20Engineer&limit=10" \
@@ -246,16 +254,23 @@ pagination (`WHERE created_at < :last_seen`).
 
 - **Context:** two roles (reviewer/admin) gate both routes and what data comes
   back, and registration must never let a client choose its own role.
-- **Decision:** email + password login returns a short-lived JWT carrying the
-  user id and role. `register` hardcodes `role="reviewer"` and the schema doesn't
-  even have a role field, so a forged `"role":"admin"` in the body is silently
-  ignored. Admin-only routes sit behind a `require_admin` dependency, and data
-  scoping (own scores vs all, internal notes) happens in the query layer, not the
-  client.
-- **Trade-off:** the token lives in `localStorage`, which is readable by JS so
-  it's exposed to XSS. The more secure option is an httpOnly cookie, but that
-  brings CSRF handling and complicates the local Docker story. For an internal
-  tool with a short token TTL I took the simpler path and called it out here.
+- **Decision:** login returns a **short-lived access token** (15 min) plus a
+  **longer-lived refresh token** (7 days), both JWTs carrying the user id, role
+  and a `type` claim. `register` hardcodes `role="reviewer"` and the schema has
+  no role field, so a forged `"role":"admin"` in the body is ignored. Admin-only
+  routes sit behind a `require_admin` dependency, and data scoping (own scores vs
+  all, internal notes) happens in the query layer. When an authenticated request
+  401s, the client silently calls `/auth/refresh` once and retries — only a
+  failed refresh sends the user back to login. Refresh rotates both tokens, and
+  an access token can't be used at `/refresh` (or vice-versa) thanks to the
+  `type` claim.
+- **Trade-off:** both tokens live in `localStorage`, which is readable by JS so
+  it's exposed to XSS. The production-grade choice is an **httpOnly, Secure,
+  SameSite cookie** for the refresh token (and CSRF handling), which I skipped
+  because it complicates the cross-origin local Docker story. Rotation is also
+  stateless — without a server-side denylist a leaked refresh token stays valid
+  until it expires; a hardened version would persist refresh-token ids in the DB
+  with reuse detection.
 
 ### ADR 3 — The "AI summary" is an awaited async stub, not a fake blocking sleep
 
@@ -288,8 +303,9 @@ pagination (`WHERE created_at < :last_seen`).
   (instead of manually refetching after each mutation) kept the components a lot
   thinner than my usual `useEffect` approach — with more time I'd add optimistic
   updates for scoring so the new row appears before the round-trip finishes.
-- Given more time I'd also add **refresh tokens** and switch the JWT to an
-  httpOnly cookie.
+- Given more time I'd move the refresh token into an **httpOnly cookie** and
+  back rotation with a server-side denylist (reuse detection), rather than the
+  stateless localStorage approach here.
 
 ---
 

@@ -25,18 +25,36 @@ def verify_password(password: str, hashed: str) -> bool:
     return bcrypt.checkpw(password.encode(), hashed.encode())
 
 
-def create_access_token(user: User) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(
-        minutes=settings.access_token_expire_minutes
-    )
-    payload = {"sub": str(user.id), "role": user.role, "exp": expire}
+ACCESS_TOKEN = "access"
+REFRESH_TOKEN = "refresh"
+
+
+def _create_token(user: User, *, minutes: int, token_type: str) -> str:
+    expire = datetime.now(timezone.utc) + timedelta(minutes=minutes)
+    payload = {
+        "sub": str(user.id),
+        "role": user.role,
+        "type": token_type,
+        "exp": expire,
+    }
     return jwt.encode(payload, settings.secret_key, algorithm=settings.algorithm)
 
 
-async def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    db: AsyncSession = Depends(get_db),
-) -> User:
+def create_access_token(user: User) -> str:
+    return _create_token(
+        user, minutes=settings.access_token_expire_minutes, token_type=ACCESS_TOKEN
+    )
+
+
+def create_refresh_token(user: User) -> str:
+    return _create_token(
+        user,
+        minutes=settings.refresh_token_expire_minutes,
+        token_type=REFRESH_TOKEN,
+    )
+
+
+async def _user_from_token(db: AsyncSession, token: str, expected_type: str) -> User:
     creds_error = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail=AuthMessages.COULD_NOT_VALIDATE_CREDENTIALS,
@@ -46,16 +64,28 @@ async def get_current_user(
         payload = jwt.decode(
             token, settings.secret_key, algorithms=[settings.algorithm]
         )
-        user_id = payload.get("sub")
-        if user_id is None:
-            raise creds_error
     except JWTError:
         raise creds_error
 
-    user = await db.get(User, int(user_id))
+    # an access token can't be used to refresh, nor a refresh token to call the API
+    if payload.get("type") != expected_type or payload.get("sub") is None:
+        raise creds_error
+
+    user = await db.get(User, int(payload["sub"]))
     if user is None:
         raise creds_error
     return user
+
+
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    return await _user_from_token(db, token, ACCESS_TOKEN)
+
+
+async def user_from_refresh_token(db: AsyncSession, token: str) -> User:
+    return await _user_from_token(db, token, REFRESH_TOKEN)
 
 
 def require_admin(user: User = Depends(get_current_user)) -> User:
