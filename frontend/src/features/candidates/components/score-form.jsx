@@ -38,7 +38,7 @@ export function ScoreForm({ candidateId }) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3" noValidate>
         <div className="flex flex-col gap-2 sm:flex-row">
           <FormField
             control={form.control}

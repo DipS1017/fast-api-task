@@ -35,6 +35,7 @@ export function LoginForm() {
   const form = useForm({
     resolver: zodResolver(mode === "login" ? loginSchema : registerSchema),
     defaultValues: { email: "", password: "" },
+    mode: "onTouched", // surface errors on blur, not only after a submit
   });
 
   function onSubmit(values) {
@@ -57,7 +58,11 @@ export function LoginForm() {
       </CardHeader>
       <CardContent className="space-y-4">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="space-y-4"
+            noValidate
+          >
             <FormField
               control={form.control}
               name="email"

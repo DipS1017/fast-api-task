@@ -37,7 +37,7 @@ export function InternalNotesCard({ candidate }) {
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3" noValidate>
             <FormField
               control={form.control}
               name="internal_notes"
